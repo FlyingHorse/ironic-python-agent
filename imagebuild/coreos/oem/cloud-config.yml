@@ -173,6 +173,19 @@ coreos:
         RemainAfterExit=yes
         ExecStart=/bin/ln -f /etc/resolv.conf /opt/ironic-python-agent/etc/resolv.conf
 
+    - name: opt-ironic\x2dpython\x2dagent-etc-host.service
+      command: start
+      content: |
+        [Unit]
+        Description="Provide host to chroot"
+        After=ironic-python-agent-container-creation.service
+        Requires=ironic-python-agent-container-creation.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/ln -f /etc/hosts /opt/ironic-python-agent/etc/hosts
+
     - name: opt-ironic\x2dpython\x2dagent-run-log.mount
       command: start
       content: |
@@ -202,6 +215,7 @@ coreos:
         After=opt-ironic\x2dpython\x2dagent-run.mount
         After=opt-ironic\x2dpython\x2dagent-mnt.mount
         After=opt-ironic\x2dpython\x2dagent-etc-resolvconf.service
+        After=opt-ironic\x2dpython\x2dagent-etc-host.service
         After=opt-ironic\x2dpython\x2dagent-run-log.mount
 
         Requires=ironic-python-agent-container-creation.service
@@ -212,6 +226,7 @@ coreos:
         Requires=opt-ironic\x2dpython\x2dagent-run.mount
         Requires=opt-ironic\x2dpython\x2dagent-mnt.mount
         Requires=opt-ironic\x2dpython\x2dagent-etc-resolvconf.service
+        Requires=opt-ironic\x2dpython\x2dagent-etc-host.service
         Requires=opt-ironic\x2dpython\x2dagent-run-log.mount
 
         [Service]
@@ -223,3 +238,10 @@ coreos:
         Restart=always
         RestartSec=30s
 
+
+write_files:
+  - path: "/etc/hosts"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      192.168.1.61  ironic
