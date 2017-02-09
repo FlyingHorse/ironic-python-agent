@@ -299,6 +299,7 @@ class TestStandbyExtension(test_base.BaseTestCase):
 
         standby._download_image(image_info)
         requests_mock.assert_called_once_with(image_info['urls'][0],
+                                              cert=None, verify=True,
                                               stream=True, proxies={})
         write = file_mock.write
         write.assert_any_call('some')
@@ -329,6 +330,7 @@ class TestStandbyExtension(test_base.BaseTestCase):
         standby._download_image(image_info)
         self.assertEqual(no_proxy, os.environ['no_proxy'])
         requests_mock.assert_called_once_with(image_info['urls'][0],
+                                              cert=None, verify=True,
                                               stream=True, proxies=proxies)
         write = file_mock.write
         write.assert_any_call('some')
@@ -679,7 +681,34 @@ class TestStandbyExtension(test_base.BaseTestCase):
 
         self.agent_extension._run_shutdown_command('poweroff')
         calls = [mock.call('sync'),
-                 mock.call('poweroff', check_exit_code=[0])]
+                 mock.call('poweroff', use_standard_locale=True,
+                           check_exit_code=[0])]
+        execute_mock.assert_has_calls(calls)
+
+    @mock.patch('ironic_python_agent.utils.execute', autospec=True)
+    def test_run_shutdown_command_valid_poweroff_sysrq(self, execute_mock):
+        execute_mock.side_effect = [('', ''), ('',
+                                    'Running in chroot, ignoring request.'),
+                                    ('', '')]
+
+        self.agent_extension._run_shutdown_command('poweroff')
+        calls = [mock.call('sync'),
+                 mock.call('poweroff', use_standard_locale=True,
+                           check_exit_code=[0]),
+                 mock.call("echo o > /proc/sysrq-trigger", shell=True)]
+        execute_mock.assert_has_calls(calls)
+
+    @mock.patch('ironic_python_agent.utils.execute', autospec=True)
+    def test_run_shutdown_command_valid_reboot_sysrq(self, execute_mock):
+        execute_mock.side_effect = [('', ''), ('',
+                                    'Running in chroot, ignoring request.'),
+                                    ('', '')]
+
+        self.agent_extension._run_shutdown_command('reboot')
+        calls = [mock.call('sync'),
+                 mock.call('reboot', use_standard_locale=True,
+                           check_exit_code=[0]),
+                 mock.call("echo b > /proc/sysrq-trigger", shell=True)]
         execute_mock.assert_has_calls(calls)
 
     @mock.patch('ironic_python_agent.utils.execute', autospec=True)
@@ -689,7 +718,8 @@ class TestStandbyExtension(test_base.BaseTestCase):
         success_result = self.agent_extension.run_image()
         success_result.join()
         calls = [mock.call('sync'),
-                 mock.call('reboot', check_exit_code=[0])]
+                 mock.call('reboot', use_standard_locale=True,
+                           check_exit_code=[0])]
         execute_mock.assert_has_calls(calls)
         self.assertEqual('SUCCEEDED', success_result.command_status)
 
@@ -711,7 +741,8 @@ class TestStandbyExtension(test_base.BaseTestCase):
         success_result.join()
 
         calls = [mock.call('sync'),
-                 mock.call('poweroff', check_exit_code=[0])]
+                 mock.call('poweroff', use_standard_locale=True,
+                           check_exit_code=[0])]
         execute_mock.assert_has_calls(calls)
         self.assertEqual('SUCCEEDED', success_result.command_status)
 
@@ -767,6 +798,7 @@ class TestStandbyExtension(test_base.BaseTestCase):
         self.agent_extension._stream_raw_image_onto_device(image_info,
                                                            '/dev/foo')
         requests_mock.assert_called_once_with(image_info['urls'][0],
+                                              cert=None, verify=True,
                                               stream=True, proxies={})
         expected_calls = [mock.call('some'), mock.call('content')]
         file_mock.write.assert_has_calls(expected_calls)
@@ -790,6 +822,7 @@ class TestStandbyExtension(test_base.BaseTestCase):
                           self.agent_extension._stream_raw_image_onto_device,
                           image_info, '/dev/foo')
         requests_mock.assert_called_once_with(image_info['urls'][0],
+                                              cert=None, verify=True,
                                               stream=True, proxies={})
         # Assert write was only called once and failed!
         file_mock.write.assert_called_once_with('some')
@@ -863,5 +896,6 @@ class TestImageDownload(test_base.BaseTestCase):
 
         self.assertEqual(content, list(image_download))
         requests_mock.assert_called_once_with(image_info['urls'][0],
+                                              cert=None, verify=True,
                                               stream=True, proxies={})
         self.assertEqual(image_info['checksum'], image_download.md5sum())

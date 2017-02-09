@@ -19,6 +19,7 @@ import six
 import time
 
 from oslo_concurrency import processutils
+from oslo_config import cfg
 from oslo_log import log
 
 from ironic_lib import disk_utils
@@ -27,6 +28,7 @@ from ironic_python_agent.extensions import base
 from ironic_python_agent import hardware
 from ironic_python_agent import utils
 
+CONF = cfg.CONF
 LOG = log.getLogger(__name__)
 
 IMAGE_CHUNK_SIZE = 1024 * 1024  # 1MB
@@ -227,7 +229,9 @@ class ImageDownload(object):
         if no_proxy:
             os.environ['no_proxy'] = no_proxy
         proxies = image_info.get('proxies', {})
-        resp = requests.get(url, stream=True, proxies=proxies)
+        verify, cert = utils.get_ssl_client_options(CONF)
+        resp = requests.get(url, stream=True, proxies=proxies,
+                            verify=verify, cert=cert)
         if resp.status_code != 200:
             msg = ('Received status code {} from {}, expected 200. Response '
                    'body: {}').format(resp.status_code, url, resp.text)
@@ -499,7 +503,15 @@ class StandbyExtension(base.BaseAgentExtension):
         except errors.CommandExecutionError as e:
             LOG.warning('Failed to sync file system buffers: % s', e)
         try:
-            utils.execute(command, check_exit_code=[0])
+            _, stderr = utils.execute(command, use_standard_locale=True,
+                                      check_exit_code=[0])
+            if 'ignoring request.' in stderr:
+                LOG.debug('%s command failed with error %s, '
+                          'falling back to sysrq-trigger.', command, stderr)
+                if command == 'poweroff':
+                    utils.execute("echo o > /proc/sysrq-trigger", shell=True)
+                elif command == 'reboot':
+                    utils.execute("echo b > /proc/sysrq-trigger", shell=True)
         except processutils.ProcessExecutionError as e:
             raise errors.SystemRebootError(e.exit_code, e.stdout, e.stderr)
 

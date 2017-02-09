@@ -216,8 +216,7 @@ class BlockDevice(encoding.SerializableComparable):
 
 
 class NetworkInterface(encoding.SerializableComparable):
-    serializable_fields = ('name', 'mac_address', 'switch_port_descr',
-                           'switch_chassis_descr', 'ipv4_address',
+    serializable_fields = ('name', 'mac_address', 'ipv4_address',
                            'has_carrier', 'lldp', 'vendor', 'product',
                            'client_id')
 
@@ -234,10 +233,6 @@ class NetworkInterface(encoding.SerializableComparable):
         # client identifier Option to allow DHCP to work over InfiniBand.
         # see https://tools.ietf.org/html/rfc4390
         self.client_id = client_id
-        # TODO(sambetts) Remove these fields in Ocata, they have been
-        # superseded by self.lldp
-        self.switch_port_descr = None
-        self.switch_chassis_descr = None
 
 
 class CPU(encoding.SerializableComparable):
@@ -594,10 +589,15 @@ class GenericHardwareManager(HardwareManager):
 
     def get_memory(self):
         # psutil returns a long, so we force it to an int
-        if psutil.version_info[0] == 1:
-            total = int(psutil.TOTAL_PHYMEM)
-        elif psutil.version_info[0] == 2:
-            total = int(psutil.phymem_usage().total)
+        try:
+            total = int(psutil.virtual_memory().total)
+        except Exception:
+            # This is explicitly catching all exceptions. We want to catch any
+            # situation where a newly upgraded psutil would fail, and instead
+            # print an error instead of blowing up the stack on IPA.
+            total = None
+            LOG.exception(("Cannot fetch total memory size using psutil "
+                           "version %s"), psutil.version_info[0])
 
         try:
             out, _e = utils.execute("dmidecode --type 17 | grep Size",

@@ -15,6 +15,7 @@
 from oslo_config import cfg
 
 from ironic_python_agent import inspector
+from ironic_python_agent import netutils
 from ironic_python_agent import utils
 
 CONF = cfg.CONF
@@ -31,7 +32,9 @@ cli_opts = [
                     'The value must start with either http:// or https://.'),
 
     cfg.StrOpt('listen_host',
-               default=APARAMS.get('ipa-listen-host', '0.0.0.0'),
+               default=APARAMS.get('ipa-listen-host',
+                                   netutils.get_wildcard_address()),
+               sample_default='::',
                deprecated_name='listen-host',
                help='The IP address to listen on. '
                     'Can be supplied as "ipa-listen-host" kernel parameter.'),
@@ -180,6 +183,24 @@ cli_opts = [
                     'in inventory. '
                     'Can be supplied as "ipa-disk-wait-delay" '
                     'kernel parameter.'),
+    cfg.BoolOpt('insecure',
+                default=APARAMS.get('ipa-insecure', False),
+                help='Verify HTTPS connections. Can be supplied as '
+                     '"ipa-insecure" kernel parameter.'),
+    cfg.StrOpt('cafile',
+               help='Path to PEM encoded Certificate Authority file '
+                    'to use when verifying HTTPS connections. '
+                    'Default is to use available system-wide configured CAs.'),
+    cfg.StrOpt('certfile',
+               help='Path to PEM encoded client certificate cert file. '
+                    'Must be provided together with "keyfile" option. '
+                    'Default is to not present any client certificates to '
+                    'the server.'),
+    cfg.StrOpt('keyfile',
+               help='Path to PEM encoded client certificate key file. '
+                    'Must be provided together with "certfile" option. '
+                    'Default is to not present any client certificates to '
+                    'the server.'),
 ]
 
 CONF.register_cli_opts(cli_opts)
