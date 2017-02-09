@@ -13,8 +13,11 @@ ADD . /tmp/ironic-python-agent
 # 1.6. Using the ARG command will be a much cleaner solution.
 COPY proxy.sh /usr/bin/proxy.sh
 
-# Ensure we hit a single mirror for builds, since httpredir is flakey
-RUN sed -i 's/httpredir/http.us/g' /etc/apt/sources.list
+RUN mv /etc/apt/sources.list /etc/apt/sources.list.bak && \
+        echo "deb http://mirrors.163.com/debian/ jessie main non-free contrib" >/etc/apt/sources.list && \
+        echo "deb http://mirrors.163.com/debian/ jessie-proposed-updates main non-free contrib" >>/etc/apt/sources.list && \
+        echo "deb-src http://mirrors.163.com/debian/ jessie main non-free contrib" >>/etc/apt/sources.list && \
+        echo "deb-src http://mirrors.163.com/debian/ jessie-proposed-updates main non-free contrib" >>/etc/apt/sources.list
 
 # Add 'backports' for qemu-utils
 RUN echo 'deb http://http.us.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/backports.list
@@ -38,11 +41,11 @@ RUN apt-mark manual python-minimal
 
 # Install requirements separately, because pip understands a git+https url
 # while setuptools doesn't
-RUN proxy.sh pip install --upgrade pip
-RUN proxy.sh pip install -c /tmp/ironic-python-agent/upper-constraints.txt --no-cache-dir -r /tmp/ironic-python-agent/requirements.txt
+RUN proxy.sh pip install --upgrade pip -i https://pypi.douban.com/simple
+RUN proxy.sh pip install -c /tmp/ironic-python-agent/upper-constraints.txt --no-cache-dir -r /tmp/ironic-python-agent/requirements.txt -i https://pypi.douban.com/simple
 
 # This will succeed because all the dependencies were installed previously
-RUN proxy.sh pip install -c /tmp/ironic-python-agent/upper-constraints.txt --no-cache-dir /tmp/ironic-python-agent
+RUN proxy.sh pip install -c /tmp/ironic-python-agent/upper-constraints.txt --no-cache-dir /tmp/ironic-python-agent -i https://pypi.douban.com/simple
 
 # Remove no longer needed packages
 # NOTE(jroll) leave git to avoid strange apt issues in downstream Dockerfiles
