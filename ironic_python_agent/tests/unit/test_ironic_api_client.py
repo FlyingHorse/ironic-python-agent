@@ -15,11 +15,11 @@
 import mock
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
-from oslotest import base as test_base
 
 from ironic_python_agent import errors
 from ironic_python_agent import hardware
 from ironic_python_agent import ironic_api_client
+from ironic_python_agent.tests.unit import base
 
 API_URL = 'http://agent-api.ironic.example.org/'
 
@@ -32,7 +32,7 @@ class FakeResponse(object):
         self.headers = headers or {}
 
 
-class TestBaseIronicPythonAgent(test_base.BaseTestCase):
+class TestBaseIronicPythonAgent(base.IronicAgentTest):
     def setUp(self):
         super(TestBaseIronicPythonAgent, self).setUp()
         self.api_client = ironic_api_client.APIClient(API_URL)
@@ -123,8 +123,9 @@ class TestBaseIronicPythonAgent(test_base.BaseTestCase):
                           uuid='deadbeef-dabb-ad00-b105-f00d00bab10c',
                           advertise_address=('192.0.2.1', '9999'))
 
-    @mock.patch('eventlet.greenthread.sleep')
-    @mock.patch('ironic_python_agent.ironic_api_client.APIClient._do_lookup')
+    @mock.patch('eventlet.greenthread.sleep', autospec=True)
+    @mock.patch('ironic_python_agent.ironic_api_client.APIClient._do_lookup',
+                autospec=True)
     def test_lookup_node(self, lookup_mock, sleep_mock):
         content = {
             'node': {
@@ -143,8 +144,9 @@ class TestBaseIronicPythonAgent(test_base.BaseTestCase):
 
         self.assertEqual(content, returned_content)
 
-    @mock.patch('eventlet.greenthread.sleep')
-    @mock.patch('ironic_python_agent.ironic_api_client.APIClient._do_lookup')
+    @mock.patch('eventlet.greenthread.sleep', autospec=True)
+    @mock.patch('ironic_python_agent.ironic_api_client.APIClient._do_lookup',
+                autospec=True)
     def test_lookup_timeout(self, lookup_mock, sleep_mock):
         lookup_mock.side_effect = loopingcall.LoopingCallTimeOut()
         self.assertRaises(errors.LookupNodeError,
