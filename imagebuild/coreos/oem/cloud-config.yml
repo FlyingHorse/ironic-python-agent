@@ -239,9 +239,9 @@ coreos:
         RestartSec=30s
 
 
-write_files:
-  - path: "/etc/hosts"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      192.168.1.31  ironic
+# write_files:
+#   - path: "/etc/hosts"
+#     permissions: "0644"
+#     owner: "root"
+#     content: |
+#       192.168.1.31  ironic
